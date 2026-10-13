@@ -29,6 +29,9 @@ def validFiles(path):#gets the files that need to be scanned
             
     return results
 
+def FileTypeFilter(fileList):
+  # to be added
+
 # Example run: python script.py arg1 arg2
 print("Script name:", sys.argv[0])
 print("All arguments:", sys.argv[1:])
