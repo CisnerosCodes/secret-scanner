@@ -21,3 +21,23 @@ code timeline:
   4.return findings
 """
 TargetFiles = fileWalkerV1.validFiles(sys.argv[1:])
+
+
+class APIKeyScanner:
+
+class EntropyStringScanner:
+
+class InjectionScanner:
+
+# base linereader 
+#ToDo: convert to our needs
+def process_file_lines(file_path):
+    # 'with' automatically handles opening and closing the file safely
+    with open(file_path, 'r', encoding='utf-8') as file:
+        # Iterating directly over the file object reads line-by-line (memory efficient)
+        for line in file:
+            # .rstrip("\n") removes the trailing newline character from each line
+            clean_line = line.rstrip("\n")
+            
+            # Perform your logic here
+            print(clean_line)
