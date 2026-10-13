@@ -20,4 +20,4 @@ code timeline:
   3.process results
   4.return findings
 """
-TargetFiles = fileWalkerV1.validFiles(arg[*1])
+TargetFiles = fileWalkerV1.validFiles(sys.argv[1:])
