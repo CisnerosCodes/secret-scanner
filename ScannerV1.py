@@ -20,6 +20,7 @@ code timeline:
   3.process results
   4.return findings
 """
+"""  outdated:
 TargetFiles = fileWalkerV1.validFiles(sys.argv[1:])
 
 
@@ -41,3 +42,4 @@ def process_file_lines(file_path):
             
             # Perform your logic here
             print(clean_line)
+"""
