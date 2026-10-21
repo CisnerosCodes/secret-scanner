@@ -100,12 +100,21 @@ class FileWalker:
     # STEP 11
     # TODO: read the first few KB; a NUL byte (b"\x00") means binary.
     #       If the file cannot be opened, return False and let STEP 14 report it.
-    raise NotImplementedError
+    try:
+      with open(path, 'rb') as f:
+        # Read the first 1024 bytes
+        chunk = f.read(1024)
+        return b'\x00' in chunk
+    except (OSError, IOError):
+      return False
 
   def too_large(self, path: Path, config: Config) -> bool:
     # STEP 12
     # TODO: path.stat().st_size > config.max_file_size.
     #       A broken symlink fails stat(); return False and let STEP 14 report it.
-    raise NotImplementedError
+    try:
+      return path.stat().st_size > config.max_file_size
+    except (OSError, IOError):
+      return False
 
       
