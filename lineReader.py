@@ -21,7 +21,6 @@ class LineReader:
         except (OSError, IOError) as e:
             raise e
         #       errors="replace" keeps non-UTF-8 lines from crashing the scan (2.3).
-        raise NotImplementedError
 
     def next_line(self) -> str | None:
         # STEP 15 Return the next line, or None at end of file (then close the file).
