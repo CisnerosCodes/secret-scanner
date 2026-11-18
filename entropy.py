@@ -8,18 +8,40 @@ RUN ORDER (skipped entirely with --no-entropy)
   STEP 21    Allowlist.is_false_positive()   UUIDs, hashes, placeholders
   STEP 18    Redactor.redact()    then build the Finding
 """
+import math
+import re
+from collections import Counter
 
 from .finding import Finding, Span
 from .redactor import Redactor
 from .rules import Severity
 
 
+_UUID = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
+# Lockfile integrity hashes, e.g. "sha512-AbC...==" (npm, yarn, pip).
+_INTEGRITY = re.compile(r"^sha(1|256|384|512)-", re.IGNORECASE)
+_PLACEHOLDER_WORDS = (
+    "YOUR_", "_HERE", "EXAMPLE", "PLACEHOLDER", "CHANGEME", "CHANGE_ME",
+    "REPLACE_ME", "REPLACEME", "INSERT_", "<", "XXXX",
+)
+# 20+ base64/hex-ish characters right after a quote or an '=' / ':' assignment.
+_CANDIDATE = re.compile(r"""(?:["']|[=:]\s*)([A-Za-z0-9+/=_\-]{20,})""")
+_HEX = re.compile(r"^[0-9a-fA-F]+$")
+
+
 class Allowlist:
     def is_false_positive(self, s: str) -> bool:
         # STEP 21 True for UUIDs, lockfile hashes, and placeholders such as
         #         YOUR_API_KEY_HERE (3.2.4).
-        # TODO: regex checks for a UUID shape and a placeholder list.
-        raise NotImplementedError
+        if _UUID.match(s) or _INTEGRITY.match(s):
+            return True
+        upper = s.upper()
+        if any(word in upper for word in _PLACEHOLDER_WORDS):
+            return True
+        # One repeated character, e.g. "0000000000000000000000".
+        return len(set(s)) == 1
 
 
 class EntropyAnalyzer:
@@ -51,15 +73,14 @@ class EntropyAnalyzer:
 
     def shannon(self, s: str) -> float:
         # STEP 20 H(s) = -sum p(c) * log2 p(c), p(c) = count(c) / len(s)   (3.2)
-        # TODO: count characters with collections.Counter, apply the formula.
-                
-        raise NotImplementedError
+        if not s:
+            return 0.0
+        n = len(s)
+        return -sum((c / n) * math.log2(c / n) for c in Counter(s).values())
 
     def _candidates(self, line: str) -> list[tuple[int, int, str]]:
         # STEP 19a Quoted or assigned tokens of 20+ base64 or hex characters (3.2.1).
-        # TODO: regex for the token; return (start, end, text) for each.
-        raise NotImplementedError
+        return [(m.start(1), m.end(1), m.group(1)) for m in _CANDIDATE.finditer(line)]
 
     def _is_hex(self, s: str) -> bool:
-        # TODO: all characters in 0-9a-fA-F.
-        raise NotImplementedError
+        return bool(_HEX.match(s))

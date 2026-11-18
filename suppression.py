@@ -13,5 +13,4 @@ class SuppressionFilter:
 
     def is_suppressed(self, line: str) -> bool:
         # STEP 16
-        # TODO: return True if any marker appears in the line.
-        raise NotImplementedError
+        return any(marker in line for marker in self.MARKERS)
