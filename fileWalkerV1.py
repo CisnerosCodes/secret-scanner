@@ -1,11 +1,23 @@
-#proof of concept file
+"""FileWalker: finds the files to scan and drops binary / oversized ones (2.1, 2.2).
+
+RUN ORDER
+  STEP 9   walk()          generator, called by Scanner.scan()
+  STEP 10  is_excluded()   default excludes + --ignore globs
+  STEP 11  is_binary()
+  STEP 12  too_large()
+"""
 
 import os
 import numpy as np
 import pandas as pd
 import sys
+from pathlib import Path
+from collections.abc import Iterator
+from .config import Config
+from fnmatch import fnmatch
 
-def validFiles(path):#gets the files that need to be scanned
+
+"""def validFiles(path):#gets the files that need to be scanned
   parent_dir = os.path.abspath(path)
   results = []
   if os.path.isfile(path):
@@ -14,23 +26,22 @@ def validFiles(path):#gets the files that need to be scanned
     # Determine the base depth of the root directory
     base_depth = parent_dir.rstrip(os.path.sep).count(os.path.sep)
     
-      for root, dirs, files in os.walk(parent_dir):
-        # Calculate current depth relative to parent
-        current_depth = root.count(os.path.sep) - base_depth
-        
-        # Level 1 or Level 2 files/folders inside the current root
-        for name in dirs + files:
-          full_path = os.path.join(root, name)
-          results.append(full_path)
-            
-        # Prevent os.walk from diving into Level 3
-        if current_depth >= 1:
-          dirs.clear()  # This stops os.walk from recursing deeper
+    for root, dirs, files in os.walk(parent_dir):
+      # Calculate current depth relative to parent
+      current_depth = root.count(os.path.sep) - base_depth
+      
+      # Level 1 or Level 2 files/folders inside the current root
+      for name in dirs + files:
+        full_path = os.path.join(root, name)
+        results.append(full_path)
+          
+      # Prevent os.walk from diving into Level 3
+      if current_depth >= 1:
+        dirs.clear()  # This stops os.walk from recursing deeper
             
     return results
 
-def FileTypeFilter(fileList):
-  # to be added
+
 
 # Example run: python script.py arg1 arg2
 print("Script name:", sys.argv[0])
@@ -102,5 +113,10 @@ class FileWalker:
         raise NotImplementedError
 
 
-
+  def too_large(self, path: Path, config: Config) -> bool:
+    # STEP 12 A broken symlink fails stat(); return False and let STEP 14 report it.
+    try:
+      return path.stat().st_size > config.max_file_size
+    except OSError:
+      return False
       

@@ -1,43 +1,84 @@
-import os
-import numpy as np
-import pandas as pd
-import sys
-import fileWalkerV1
+import copy
+import time
+from pathlib import Path
 
-"""
-summery: 
-main script that the client would run
-
-takes up to 7 arguments: target path, output format, entropy threshold, max file size, file types to ignore, check entropy (toggle), check injection (toggle)
-
-code timeline: 
-  1. get the files to be scanned
-  1.1. filter for criteria 
-  2. scan the files:
-  2.1.api
-  2.2.entropy strings 
-  2.3.injection
-  3.process results
-  4.return findings
-"""
-TargetFiles = fileWalkerV1.validFiles(sys.argv[1:])
+from .config import Config
+from .entropy import EntropyAnalyzer
+from .fileWalkerV1 import FileWalker
+from .finding import Finding, Warning
+from .lineReader import LineReader
+from .report import ScanReport
+from .rule_engine import RuleEngine
+from .rules import RuleTable, RuleType
+from .suppression import SuppressionFilter
 
 
-class APIKeyScanner:
+class Scanner:
+    def __init__(self, config: Config) -> None:
+        # STEP 6a Entropy analyzer, unless --no-entropy.
+        self.entropy = (
+            None if config.no_entropy
+            else EntropyAnalyzer(base64_threshold=config.entropy_threshold)
+        )
+        # STEP 6b Drop injection rules when --no-injection is set.
+        # Copy so compiling never mutates the shared module-level table.
+        rules = [copy.copy(r) for r in RuleTable
+                 if not (config.no_injection and r.type is RuleType.INJECTION)]
+        # STEP 7  Compile every pattern once.
+        self.engine = RuleEngine.compile(rules)
+        self.walker = FileWalker()
+        self.suppression = SuppressionFilter()
 
-class EntropyStringScanner:
+    def scan(self, config: Config) -> ScanReport:
+        # STEP 8
+        start = time.perf_counter()
+        findings: list[Finding] = []
+        warnings: list[Warning] = []
+        scanned = 0
 
-class InjectionScanner:
+        for path in self.walker.walk(config.path, config):          # STEP 9
+            file_findings, warning = self.scan_file(path)           # STEP 13
+            if warning is not None:
+                warnings.append(warning)
+                continue
+            scanned += 1
+            findings.extend(file_findings)
 
-# base linereader 
-#ToDo: convert to our needs
-def process_file_lines(file_path):
-    # 'with' automatically handles opening and closing the file safely
-    with open(file_path, 'r', encoding='utf-8') as file:
-        # Iterating directly over the file object reads line-by-line (memory efficient)
-        for line in file:
-            # .rstrip("\n") removes the trailing newline character from each line
-            clean_line = line.rstrip("\n")
-            
-            # Perform your logic here
-            print(clean_line)
+        # STEP 22
+        return ScanReport(
+            findings=findings,
+            warnings=warnings,
+            files_scanned=scanned,
+            files_skipped=self.walker.skipped,
+            elapsed=time.perf_counter() - start,
+        )
+
+    def scan_file(self, path: Path) -> tuple[list[Finding], Warning | None]:
+        # STEP 13 Returns (findings, warning). A warning means the file was unreadable.
+        reader = LineReader()
+        try:
+            reader.open(path)                                       # STEP 14
+        except OSError as err:
+            return [], Warning(path=path, reason=f"unreadable file: {err.strerror or err}")
+
+        findings: list[Finding] = []
+        ext = path.suffix.lower()
+        line_number = 0
+        try:
+            while (line := reader.next_line()) is not None:         # STEP 15
+                line_number += 1
+                line = line.rstrip("\r\n")
+                if self.suppression.is_suppressed(line):            # STEP 16
+                    continue
+                line_findings = self.engine.match_line(line, ext)   # STEP 17
+                if self.entropy is not None:
+                    line_findings += self.entropy.analyze(line, line_findings)  # STEP 19
+                for f in line_findings:
+                    f.file = path
+                    f.line_number = line_number
+                findings.extend(line_findings)
+        except OSError as err:  # read failure mid-file
+            return findings, Warning(path=path, reason=f"read error: {err.strerror or err}")
+        finally:
+            reader.close()
+        return findings, None
