@@ -10,9 +10,11 @@ RUN ORDER
 
 from __future__ import annotations
 
+import re
+
 from .finding import Finding, Span
 from .redactor import Redactor
-from .rules import InjectionRule, Rule, RuleKind
+from .rules import InjectionRule, Rule, RuleType
 
 
 class RuleEngine:
@@ -22,12 +24,10 @@ class RuleEngine:
     @classmethod
     def compile(cls, table: list[Rule]) -> RuleEngine:
         # STEP 7  Compile every pattern exactly once (3.1.5, 3.3.2).
-        # TODO: for rule in table: rule.regex = re.compile(rule.pattern)
         for rule in table: 
             rule.regex = re.compile(rule.pattern)
         return cls(table)
         
-
     def match_line(self, line: str, ext: str) -> list[Finding]:
         # STEP 17 Called once per line.  Returns every finding on this line.
         findings: list[Finding] = []
@@ -41,7 +41,7 @@ class RuleEngine:
                 # STEP 18 Redact BEFORE the value goes anywhere (3.4.1).
                 #         Injection findings show code, not a secret, so they are
                 #         not redacted.  TEAM DECISION: confirm this.
-                if rule.kind is RuleKind.KNOWN_SECRET:
+                if rule.type is RuleType.KNOWN_SECRET:
                     preview = Redactor.redact(match.group())
                 else:
                     preview = match.group()

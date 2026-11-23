@@ -1,4 +1,11 @@
-# 2 tasks: 1) find all files in a given directory and its subdirectories, 2) filter out files that are binary or exceed a certain size limit.
+"""FileWalker: finds the files to scan and drops binary / oversized ones (2.1, 2.2).
+
+RUN ORDER
+  STEP 9   walk()          generator, called by Scanner.scan()
+  STEP 10  is_excluded()   default excludes + --ignore globs
+  STEP 11  is_binary()
+  STEP 12  too_large()
+"""
 
 import os
 import numpy as np
@@ -7,9 +14,10 @@ import sys
 from pathlib import Path
 from collections.abc import Iterator
 from .config import Config
+from fnmatch import fnmatch
 
 
-def validFiles(path):#gets the files that need to be scanned
+"""def validFiles(path):#gets the files that need to be scanned
   parent_dir = os.path.abspath(path)
   results = []
   if os.path.isfile(path):
@@ -48,6 +56,7 @@ except IndexError:
     
 print(Target_DIR)
 
+"""
 class FileWalker:
   DEFAULT_EXCLUDES = {".git", "target", "node_modules"}  # 2.1
   
@@ -86,35 +95,29 @@ class FileWalker:
     return True
   
   def is_excluded(self, path: Path, config: Config) -> bool:
-    # STEP 10
-    # TODO: True if path.name is in DEFAULT_EXCLUDES, or if the path matches
-    #       any glob in config.ignore_globs (fnmatch).
+    # STEP 10 True if the name is a default exclude or matches an --ignore glob
+    #         (against the file name, or the whole path for globs with a '/').
     if path.name in self.DEFAULT_EXCLUDES:
       return True
+    posix = path.as_posix()
     for glob in config.ignore_globs:
-      if path.match(glob):
+      if fnmatch(path.name, glob) or fnmatch(posix, glob) or path.match(glob):
         return True
     return False
   
   def is_binary(self, path: Path) -> bool:
-    # STEP 11
-    # TODO: read the first few KB; a NUL byte (b"\x00") means binary.
-    #       If the file cannot be opened, return False and let STEP 14 report it.
+    # STEP 11 A NUL byte in the first KB means binary.  Unopenable files are
+    #         not binary; STEP 14 reports them as warnings.
     try:
-      with open(path, 'rb') as f:
-        # Read the first 1024 bytes
-        chunk = f.read(1024)
-        return b'\x00' in chunk
-    except (OSError, IOError):
+      with open(path, "rb") as f:
+        return b"\x00" in f.read(1024)
+    except OSError:
       return False
 
   def too_large(self, path: Path, config: Config) -> bool:
-    # STEP 12
-    # TODO: path.stat().st_size > config.max_file_size.
-    #       A broken symlink fails stat(); return False and let STEP 14 report it.
+    # STEP 12 A broken symlink fails stat(); return False and let STEP 14 report it.
     try:
       return path.stat().st_size > config.max_file_size
-    except (OSError, IOError):
+    except OSError:
       return False
-
       

@@ -12,5 +12,7 @@ class Redactor:
     @staticmethod
     def redact(value: str) -> str:
         # STEP 18 Example: "AKIAIOSFODNN7EXAMPLE" -> "AKIA****************"
-        # TODO: keep the first VISIBLE_PREFIX characters, replace the rest with "*".
-        raise NotImplementedError
+        n = Redactor.VISIBLE_PREFIX
+        if len(value) <= n:
+            return "*" * len(value)
+        return value[:n] + "*" * (len(value) - n)
