@@ -56,7 +56,7 @@ RuleTable: list[Rule] = [
     # --- KNOWN SECRET RULES ---
     Rule("AWS Access Key", r"AKIA[0-9A-Z]{16}",  Severity.HIGH),
     Rule("GitHub Token", r"ghp_[a-zA-Z0-9]{36}", Severity.HIGH),
-    Rule("OpenAI API Key", r"sk-[a-zA-Z0-9]{48}",Severity.HIGH),
+    Rule("OpenAI API Key", r"\bsk-(?:proj-)?[a-zA-Z0-9_-]{48,}", Severity.HIGH),
     Rule("JWT", r"eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+", Severity.MEDIUM),
 
     # --- INJECTION RULES ---

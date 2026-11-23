@@ -60,7 +60,15 @@ class FileWalker:
             return True
         path_str = path.as_posix()
         for pattern in config.ignore_globs:
-            if fnmatch(path.name, pattern) or fnmatch(path_str, pattern):
+            # "dir/**" and "dir/*" exclude everything under dir.
+            glob = pattern.rstrip("/")
+            if glob.endswith("/**"):
+                glob = glob[:-3]
+            elif glob.endswith("/*"):
+                glob = glob[:-2]
+            if (fnmatch(path.name, glob) or fnmatch(path_str, glob)
+                    or fnmatch(path_str, f"*/{glob}") or fnmatch(path_str, f"{glob}/*")
+                    or fnmatch(path_str, f"*/{glob}/*")):
                 return True
         return False
 
