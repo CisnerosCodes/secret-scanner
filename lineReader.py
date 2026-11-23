@@ -15,19 +15,22 @@ class LineReader:
     def open(self, path: Path) -> None:
         # STEP 14 Raise OSError if the file cannot be read; Scanner turns that
         #         into a warning (PATH unreadable file, 2.5).
-        # TODO: self._file = open(path, encoding="utf-8", errors="replace")
-        try:
-            self._file = open(path, encoding="utf-8", errors="replace")
-        except (OSError, IOError) as e:
-            raise e
         #       errors="replace" keeps non-UTF-8 lines from crashing the scan (2.3).
-        raise NotImplementedError
+        self._file = open(path, encoding="utf-8", errors="replace")
+
 
     def next_line(self) -> str | None:
         # STEP 15 Return the next line, or None at end of file (then close the file).
-        # TODO: line = self._file.readline(); "" means end of file.
+        if self._file is None:
+            return None
         line = self._file.readline()
         if line == "":
-            self._file.close()
+            self.close()
             return None
         return line
+    
+    def close(self) -> None:
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+

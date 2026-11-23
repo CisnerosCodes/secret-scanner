@@ -78,3 +78,4 @@ RuleTable: list[Rule] = [
                   Severity.MEDIUM, confidence=Confidence.MEDIUM,
                   languages=[".js", ".html"]),
 ]
+RULE_TABLE = RuleTable

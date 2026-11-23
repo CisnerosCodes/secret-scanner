@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .config import Config, OutputFormat
 from .reporters import JsonReporter, TextReporter
-from .scanner import Scanner
+from .ScannerV1 import Scanner
 
 VERSION = "0.1.0"
 
@@ -88,8 +88,6 @@ class Cli:
         args = parser.parse_args(argv)
 
         # STEP 3b Range checks argparse cannot do (4.3: clear error, exit 2).
-        # TODO: reject --max-file-size <= 0 and --entropy-threshold <= 0
-        #       with parser.error("..."), which prints the message and exits 2.
         if args.max_file_size <= 0:
             parser.error("--max-file-size must be greater than 0")
         if args.entropy_threshold <= 0:
