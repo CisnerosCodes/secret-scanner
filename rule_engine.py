@@ -3,7 +3,7 @@
 RUN ORDER
   STEP 7   compile()      ONCE, from Scanner.__init__
   STEP 17  match_line()   once per line, from Scanner.scan_file
-  STEP 17a   InjectionRule.applies_to(ext)   skip rules for other languages
+  STEP 17a   InjectionRule.applies_to(line, ext)   skip rules for other languages
   STEP 17b   regex search on the line
   STEP 18    Redactor.redact() + build a Finding for each match
 """
@@ -24,23 +24,21 @@ class RuleEngine:
     @classmethod
     def compile(cls, table: list[Rule]) -> RuleEngine:
         # STEP 7  Compile every pattern exactly once (3.1.5, 3.3.2).
-        for rule in table: 
+        for rule in table:
             rule.regex = re.compile(rule.pattern)
         return cls(table)
-        
+
     def match_line(self, line: str, ext: str) -> list[Finding]:
         # STEP 17 Called once per line.  Returns every finding on this line.
         findings: list[Finding] = []
         for rule in self.rules:
             # STEP 17a PATH injection rule on a non-matching file type: skip (3.3.5).
-            if isinstance(rule, InjectionRule) and not rule.applies_to(ext):
+            if isinstance(rule, InjectionRule) and not rule.applies_to(line, ext):
                 continue
 
             # STEP 17b Every match of this rule on the line.
             for match in rule.regex.finditer(line):
                 # STEP 18 Redact BEFORE the value goes anywhere (3.4.1).
-                #         Injection findings show code, not a secret, so they are
-                #         not redacted.  TEAM DECISION: confirm this.
                 if rule.type is RuleType.KNOWN_SECRET:
                     preview = Redactor.redact(match.group())
                 else:
