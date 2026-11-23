@@ -17,7 +17,7 @@ from .config import Config
 from fnmatch import fnmatch
 
 
-"""def validFiles(path):#gets the files that need to be scanned
+def validFiles(path):#gets the files that need to be scanned
   parent_dir = os.path.abspath(path)
   results = []
   if os.path.isfile(path):
@@ -113,10 +113,9 @@ class FileWalker:
         raise NotImplementedError
 
 
-  def too_large(self, path: Path, config: Config) -> bool:
-    # STEP 12 A broken symlink fails stat(); return False and let STEP 14 report it.
-    try:
-      return path.stat().st_size > config.max_file_size
-    except OSError:
-      return False
-      
+    def too_large(self, path: Path, config: Config) -> bool:
+      # STEP 12 A broken symlink fails stat(); return False and let STEP 14 report it.
+      try:
+        return path.stat().st_size > config.max_file_size
+      except OSError:
+        return False
