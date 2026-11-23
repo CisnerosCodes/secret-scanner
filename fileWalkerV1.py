@@ -8,9 +8,6 @@ RUN ORDER
 """
 
 import os
-import numpy as np
-import pandas as pd
-import sys
 from pathlib import Path
 from collections.abc import Iterator
 from .config import Config
@@ -42,19 +39,6 @@ def validFiles(path):#gets the files that need to be scanned
     return results
 
 
-
-# Example run: python script.py arg1 arg2
-print("Script name:", sys.argv[0])
-print("All arguments:", sys.argv[1:])
-
-#client runs CLI command and provides a path to either a folder or exact file to be scanned
-# script path 
-try:
-    Target_DIR = sys.argv[1]
-except IndexError:
-    Target_DIR = os.getcwd()
-    
-print(Target_DIR)
 
 class FileWalker:
     DEFAULT_EXCLUDES = {".git", "target", "node_modules"}  # 2.1
@@ -96,22 +80,32 @@ class FileWalker:
 
     def is_excluded(self, path: Path, config: Config) -> bool:
         # STEP 10
-        # TODO: True if path.name is in DEFAULT_EXCLUDES, or if the path matches
-        #       any glob in config.ignore_globs (fnmatch).
-        raise NotImplementedError
+        # True if path.name is in DEFAULT_EXCLUDES, or if the path matches
+        # any glob in config.ignore_globs (fnmatch). "dir/**" and "dir/*" both
+        # exclude everything under dir.
+        if path.name in self.DEFAULT_EXCLUDES:
+            return True
+        posix = path.as_posix()
+        for glob in config.ignore_globs:
+            g = glob.rstrip("/")
+            if g.endswith("/**"):
+                g = g[:-3]
+            elif g.endswith("/*"):
+                g = g[:-2]
+            if (fnmatch(path.name, g) or fnmatch(posix, g) or fnmatch(posix, f"*/{g}")
+                    or fnmatch(posix, f"{g}/*") or fnmatch(posix, f"*/{g}/*")):
+                return True
+        return False
 
     def is_binary(self, path: Path) -> bool:
         # STEP 11
-        # TODO: read the first few KB; a NUL byte (b"\x00") means binary.
-        #       If the file cannot be opened, return False and let STEP 14 report it.
-        raise NotImplementedError
-
-    def too_large(self, path: Path, config: Config) -> bool:
-        # STEP 12
-        # TODO: path.stat().st_size > config.max_file_size.
-        #       A broken symlink fails stat(); return False and let STEP 14 report it.
-        raise NotImplementedError
-
+        # Read the first few KB; a NUL byte (b"\x00") means binary.
+        # If the file cannot be opened, return False and let STEP 14 report it.
+        try:
+            with open(path, "rb") as f:
+                return b"\x00" in f.read(8192)
+        except OSError:
+            return False
 
     def too_large(self, path: Path, config: Config) -> bool:
       # STEP 12 A broken symlink fails stat(); return False and let STEP 14 report it.

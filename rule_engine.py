@@ -33,7 +33,7 @@ class RuleEngine:
         findings: list[Finding] = []
         for rule in self.rules:
             # STEP 17a PATH injection rule on a non-matching file type: skip (3.3.5).
-            if isinstance(rule, InjectionRule) and not rule.applies_to(ext):
+            if isinstance(rule, InjectionRule) and not rule.applies_to(line, ext):
                 continue
 
             # STEP 17b Every match of this rule on the line.
